@@ -18,7 +18,12 @@ public class StateChainImpl<S> implements StateChain<S> {
     }
 
     @Override
-    public String showStateChain() {
+    public void showStateChain() {
+
+    }
+
+    @Override
+    public String generatePlantUml() {
         return "";
     }
 }

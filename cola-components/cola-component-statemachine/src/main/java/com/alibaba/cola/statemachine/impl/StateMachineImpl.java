@@ -64,21 +64,8 @@ public class StateMachineImpl<S, E, C> implements StateMachine<S, E, C> {
     public List<StateChain<S>> getTargetStateChain(S sourceStateId, E event, boolean includeSource) {
         isReady();
         State sourceState = getState(sourceStateId);
-        List<Transition<S, E, C>> transitions = sourceState.getEventTransitions(event);
-        if (transitions == null || transitions.isEmpty()) {
-            Debugger.debug("There is no Transition for " + event);
-            return new ArrayList<>();
-        }
-        List<S> targetStates = new ArrayList<>();
-        for (Transition<S, E, C> transition : transitions) {
-            State<S, E, C> targetState = transition.getTarget();
-            S targetStateId = targetState.getId();
-            if (targetStateId.equals(sourceStateId)) {
-                continue;
-            }
-            targetStates.add(targetStateId);
-            getTargetStateChain(targetStateId, event, true);
-        }
+        List<Transition<S, E, C>> internalTransitions = sourceState.getEventTransitions(event, TransitionType.INTERNAL);
+        List<Transition<S, E, C>> externalTransitions = sourceState.getEventTransitions(event, TransitionType.EXTERNAL);
         return null;
     }
 

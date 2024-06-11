@@ -12,5 +12,7 @@ public interface StateChain<S> {
 
     List<S> getStateChain();
 
-    String showStateChain();
+    void showStateChain();
+
+    String generatePlantUml();
 }

@@ -53,6 +53,11 @@ public class TransitionImpl<S,E,C> implements Transition<S,E,C> {
     }
 
     @Override
+    public TransitionType getType() {
+        return this.type;
+    }
+
+    @Override
     public State<S, E, C> getTarget() {
         return this.target;
     }
@@ -121,10 +126,5 @@ public class TransitionImpl<S,E,C> implements Transition<S,E,C> {
             throw new StateMachineException(String.format("Internal transition source state '%s' " +
                     "and target state '%s' must be same.", source, target));
         }
-    }
-
-    @Override
-    public boolean whetherInternal() {
-        return type == TransitionType.INTERNAL;
     }
 }

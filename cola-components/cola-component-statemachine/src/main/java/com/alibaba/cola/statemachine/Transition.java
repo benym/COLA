@@ -29,6 +29,8 @@ public interface Transition<S, E, C>{
     void setEvent(E event);
 
     void setType(TransitionType type);
+
+    TransitionType getType();
     /**
      * Gets the target state of this transition.
      *
@@ -62,11 +64,4 @@ public interface Transition<S, E, C>{
      * Verify transition correctness
      */
     void verify();
-
-    /**
-     * Determine the state machine transition type
-     *
-     * @return true: yes; false: no
-     */
-    boolean whetherInternal();
 }
