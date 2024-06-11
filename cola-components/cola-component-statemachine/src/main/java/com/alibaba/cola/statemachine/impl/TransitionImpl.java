@@ -122,4 +122,9 @@ public class TransitionImpl<S,E,C> implements Transition<S,E,C> {
                     "and target state '%s' must be same.", source, target));
         }
     }
+
+    @Override
+    public boolean whetherInternal() {
+        return type == TransitionType.INTERNAL;
+    }
 }

@@ -62,4 +62,11 @@ public interface Transition<S, E, C>{
      * Verify transition correctness
      */
     void verify();
+
+    /**
+     * Determine the state machine transition type
+     *
+     * @return true: yes; false: no
+     */
+    boolean whetherInternal();
 }

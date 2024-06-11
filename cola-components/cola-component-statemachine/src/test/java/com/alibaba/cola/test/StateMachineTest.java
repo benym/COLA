@@ -28,7 +28,8 @@ public class StateMachineTest {
         STATE1,
         STATE2,
         STATE3,
-        STATE4
+        STATE4,
+        STATE5
     }
 
     static enum Events {
@@ -237,6 +238,60 @@ public class StateMachineTest {
         Assertions.assertEquals(States.STATE4,target2);
         States target3 = stateMachine.fireEvent(StateMachineTest.States.STATE3, StateMachineTest.Events.EVENT2, new Context());
         Assertions.assertEquals(States.STATE4,target3);
+    }
+
+    @Test
+    public void testTargetState() {
+        StateMachineBuilder<States, Events, Context> builder = StateMachineBuilderFactory.create();
+        builder.internalTransition()
+                .within(StateMachineTest.States.STATE1)
+                .on(StateMachineTest.Events.EVENT1)
+                .when(checkCondition())
+                .perform(doAction());
+        builder.externalTransition()
+                .from(States.STATE1)
+                .to(States.STATE2)
+                .on(Events.EVENT1)
+                .when(checkCondition())
+                .perform(doAction());
+        builder.externalTransition()
+                .from(States.STATE1)
+                .to(States.STATE4)
+                .on(Events.EVENT2)
+                .when(checkCondition())
+                .perform(doAction());
+        builder.externalTransition()
+                .from(States.STATE2)
+                .to(States.STATE3)
+                .on(Events.EVENT1)
+                .when(checkCondition())
+                .perform(doAction());
+        builder.externalTransition()
+                .from(States.STATE2)
+                .to(States.STATE4)
+                .on(Events.EVENT2)
+                .when(checkCondition())
+                .perform(doAction());
+        builder.externalTransitions()
+                .fromAmong(StateMachineTest.States.STATE1, StateMachineTest.States.STATE2)
+                .to(StateMachineTest.States.STATE5)
+                .on(StateMachineTest.Events.EVENT3)
+                .when(checkCondition())
+                .perform(doAction());
+        builder.externalParallelTransition()
+                .from(States.STATE3)
+                .toAmong(States.STATE4, States.STATE5)
+                .on(StateMachineTest.Events.EVENT1)
+                .when(checkCondition())
+                .perform(doAction());
+        StateMachine<States, Events, Context> stateMachine = builder.build("TestTargetStateMachine");
+        System.out.println(stateMachine.generatePlantUML());
+        List<States> targetStateList = stateMachine.getTargetStates(States.STATE1, Events.EVENT1);
+        Assertions.assertTrue(targetStateList.contains(States.STATE1));
+        Assertions.assertTrue(targetStateList.contains(States.STATE2));
+        List<States> targetStateList2 = stateMachine.getTargetStates(States.STATE3, Events.EVENT1);
+        Assertions.assertTrue(targetStateList2.contains(States.STATE4));
+        Assertions.assertTrue(targetStateList2.contains(States.STATE5));
     }
 
     private Condition<Context> checkCondition() {

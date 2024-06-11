@@ -23,6 +23,28 @@ public interface StateMachine<S, E, C> extends Visitable{
     boolean verify(S sourceStateId,E event);
 
     /**
+     * Sending an event {@code E} to the state machine
+     * Calculate the subsequent states of the current sourceState in advance
+     *
+     * @param sourceState the source state
+     * @param event the event to send
+     * @return the target state list
+     */
+    List<S> getTargetStates(S sourceState, E event);
+
+    /**
+     * Sending an event {@code E} to the state machine
+     * Calculate the subsequent state chain of the current sourceState in advance
+     * This method does not actually perform state transitions
+     *
+     * @param sourceState   the source state
+     * @param event         the event to send
+     * @param includeSource Whether the output contains sourceState
+     * @return the target state chain list
+     */
+    List<StateChain<S>> getTargetStateChain(S sourceState, E event, boolean includeSource);
+
+    /**
      * Send an event {@code E} to the state machine.
      *
      * @param sourceState the source state

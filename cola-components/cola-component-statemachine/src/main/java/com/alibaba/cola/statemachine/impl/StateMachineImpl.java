@@ -4,10 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import com.alibaba.cola.statemachine.State;
-import com.alibaba.cola.statemachine.StateMachine;
-import com.alibaba.cola.statemachine.Transition;
-import com.alibaba.cola.statemachine.Visitor;
+import com.alibaba.cola.statemachine.*;
 import com.alibaba.cola.statemachine.builder.FailCallback;
 
 /**
@@ -43,6 +40,46 @@ public class StateMachineImpl<S, E, C> implements StateMachine<S, E, C> {
         List<Transition<S, E, C>> transitions = sourceState.getEventTransitions(event);
 
         return transitions != null && transitions.size() != 0;
+    }
+
+    @Override
+    public List<S> getTargetStates(S sourceStateId, E event) {
+        isReady();
+        State sourceState = getState(sourceStateId);
+        List<Transition<S, E, C>> transitions = sourceState.getEventTransitions(event);
+        if (transitions == null || transitions.isEmpty()) {
+            Debugger.debug("There is no Transition for " + event);
+            return new ArrayList<>();
+        }
+        List<S> targetStates = new ArrayList<>();
+        for (Transition<S, E, C> transition : transitions) {
+            State<S, E, C> targetState = transition.getTarget();
+            S targetStateId = targetState.getId();
+            targetStates.add(targetStateId);
+        }
+        return targetStates;
+    }
+
+    @Override
+    public List<StateChain<S>> getTargetStateChain(S sourceStateId, E event, boolean includeSource) {
+        isReady();
+        State sourceState = getState(sourceStateId);
+        List<Transition<S, E, C>> transitions = sourceState.getEventTransitions(event);
+        if (transitions == null || transitions.isEmpty()) {
+            Debugger.debug("There is no Transition for " + event);
+            return new ArrayList<>();
+        }
+        List<S> targetStates = new ArrayList<>();
+        for (Transition<S, E, C> transition : transitions) {
+            State<S, E, C> targetState = transition.getTarget();
+            S targetStateId = targetState.getId();
+            if (targetStateId.equals(sourceStateId)) {
+                continue;
+            }
+            targetStates.add(targetStateId);
+            getTargetStateChain(targetStateId, event, true);
+        }
+        return null;
     }
 
     @Override
