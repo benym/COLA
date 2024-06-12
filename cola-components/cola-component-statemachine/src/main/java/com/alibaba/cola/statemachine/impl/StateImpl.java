@@ -56,6 +56,10 @@ public class StateImpl<S,E,C> implements State<S,E,C> {
     @Override
     public List<Transition<S, E, C>> getEventTransitions(E event, TransitionType transitionType) {
         List<Transition<S, E, C>> transitionList = this.getEventTransitions(event);
+        if (transitionList == null || transitionList.isEmpty()) {
+            Debugger.debug("There is no Transition for " + event);
+            return new ArrayList<>();
+        }
         return transitionList.stream()
                 .filter(transition-> transition.getType().equals(transitionType))
                 .collect(Collectors.toList());

@@ -25,6 +25,12 @@ public interface StateMachine<S, E, C> extends Visitable{
     /**
      * Sending an event {@code E} to the state machine
      * Calculate the subsequent states of the current sourceState in advance
+     * This method does not actually perform state transitions
+     * Such as a given state machine
+     * STATE1 --> STATE1 : EVENT1
+     * STATE1 --> STATE2 : EVENT1
+     * When the method's sourceState is STATE1 and event is EVENT1
+     * Will return Source: STATE1, Targets: [STATE1, STATE2], Event: EVENT1
      *
      * @param sourceState the source state
      * @param event the event to send
@@ -36,13 +42,17 @@ public interface StateMachine<S, E, C> extends Visitable{
      * Sending an event {@code E} to the state machine
      * Calculate the subsequent state chain of the current sourceState in advance
      * This method does not actually perform state transitions
+     * Such as a given state machine
+     * STATE1 --> STATE2 : EVENT1
+     * STATE2 --> STATE3 : EVENT1
+     * When the method's sourceState is STATE1 and event is EVENT1
+     * Will return Source: STATE1, Targets: [STATE2, STATE3], Event: EVENT1
      *
      * @param sourceState   the source state
      * @param event         the event to send
-     * @param includeSource Whether the output contains sourceState
      * @return the target state chain list
      */
-    List<StateChain<S>> getTargetStateChain(S sourceState, E event, boolean includeSource);
+    List<StateChain<S, E>> getTargetStateChain(S sourceState, E event);
 
     /**
      * Send an event {@code E} to the state machine.
