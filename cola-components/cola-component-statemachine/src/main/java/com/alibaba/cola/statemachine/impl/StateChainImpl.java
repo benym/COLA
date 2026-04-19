@@ -34,7 +34,7 @@ public class StateChainImpl<S, E, C> implements StateChain<S, E> {
     }
 
     @Override
-    public List<S> getTargets() {
+    public List<S> getChainStates() {
         return this.targetStates.stream().map(State::getId)
                 .collect(Collectors.toList());
     }

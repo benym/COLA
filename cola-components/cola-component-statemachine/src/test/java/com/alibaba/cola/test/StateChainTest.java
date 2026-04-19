@@ -160,7 +160,7 @@ public class StateChainTest {
                 List.of(StateMachineTest.States.STATE2, StateMachineTest.States.STATE5));
 
         Set<List<StateMachineTest.States>> actualChains = targetStateChainList.stream()
-                .map(StateChain::getTargets)
+                .map(StateChain::getChainStates)
                 .collect(Collectors.toSet());
 
         Assertions.assertAll(

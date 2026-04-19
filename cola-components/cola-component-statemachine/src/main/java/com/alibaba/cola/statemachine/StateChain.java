@@ -22,7 +22,7 @@ public interface StateChain<S, E> extends StateChainVisitable {
      *
      * @return the list of target states
      */
-    List<S> getTargets();
+    List<S> getChainStates();
 
     /**
      * Gets the event of stateChain
