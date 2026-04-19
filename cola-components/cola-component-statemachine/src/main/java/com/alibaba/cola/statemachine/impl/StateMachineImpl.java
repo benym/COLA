@@ -1,9 +1,19 @@
 package com.alibaba.cola.statemachine.impl;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.alibaba.cola.statemachine.*;
+import com.alibaba.cola.statemachine.State;
+import com.alibaba.cola.statemachine.StateChain;
+import com.alibaba.cola.statemachine.StateMachine;
+import com.alibaba.cola.statemachine.Transition;
+import com.alibaba.cola.statemachine.Visitor;
 import com.alibaba.cola.statemachine.builder.FailCallback;
 
 /**
@@ -47,43 +57,61 @@ public class StateMachineImpl<S, E, C> implements StateMachine<S, E, C> {
     @Override
     public List<S> getTargetStates(S sourceStateId, E event) {
         isReady();
-        State sourceState = getState(sourceStateId);
+        State<S, E, C> sourceState = getState(sourceStateId);
         List<Transition<S, E, C>> transitions = sourceState.getEventTransitions(event);
         if (transitions == null || transitions.isEmpty()) {
             Debugger.debug("There is no Transition for " + event);
             return new ArrayList<>();
         }
-        List<S> targetStates = new ArrayList<>();
+        Set<S> targetStateSet = new LinkedHashSet<>();
         for (Transition<S, E, C> transition : transitions) {
             State<S, E, C> targetState = transition.getTarget();
             S targetStateId = targetState.getId();
-            targetStates.add(targetStateId);
+            targetStateSet.add(targetStateId);
         }
-        return targetStates;
+        return new ArrayList<>(targetStateSet);
     }
 
     @Override
     public List<StateChain<S, E>> getTargetStateChain(S sourceStateId, E event) {
         isReady();
-        String key = sourceStateId.toString() + event.toString();
-        List<StateChain<S, E>> stateChains = stateChainMap.get(key);
-        if (stateChains != null && !stateChains.isEmpty()) {
-            return stateChains;
-        }
-        State sourceState = getState(sourceStateId);
-        List<Transition<S, E, C>> internalTransitions = sourceState.getEventTransitions(event, TransitionType.INTERNAL);
-        List<Transition<S, E, C>> externalTransitions = sourceState.getEventTransitions(event, TransitionType.EXTERNAL);
-        List<StateChain<S, E>> internalStateChains = buildInternalStateChains(sourceState, event, internalTransitions);
-        List<StateChain<S, E>> externalStateChains = buildExternalStateChains(sourceState, event, externalTransitions);
-        List<StateChain<S, E>> result = new ArrayList<>(internalStateChains);
-        result.addAll(externalStateChains);
-        stateChainMap.put(key, result);
-        return result;
+        String key = sourceStateId.toString() + ":" + event.toString();
+        return stateChainMap.computeIfAbsent(key, k -> {
+            State sourceState = getState(sourceStateId);
+            List<Transition<S, E, C>> internalTransitions = sourceState.getEventTransitions(event,
+                    TransitionType.INTERNAL);
+            List<Transition<S, E, C>> externalTransitions = sourceState.getEventTransitions(event,
+                    TransitionType.EXTERNAL);
+            List<StateChain<S, E>> internalStateChains = buildInternalStateChains(sourceState, event,
+                    internalTransitions);
+            List<StateChain<S, E>> externalStateChains = buildExternalStateChains(sourceState, event,
+                    externalTransitions);
+            List<StateChain<S, E>> result = new ArrayList<>(internalStateChains);
+            result.addAll(externalStateChains);
+            return result;
+        });
     }
 
-    private List<StateChain<S, E>> buildInternalStateChains(State<S, E, C> sourceState, E event, List<Transition<S, E, C>> internalTransitions) {
+    /**
+     * Build state chains for internal transitions.
+     * <p>
+     * Internal transition means the source state and target state are the same.
+     * Since all internal transitions on the same event have the same source state,
+     * we only need to take the first one to get the target state.
+     *
+     * @param sourceState         the source state
+     * @param event               the event that triggers the transition
+     * @param internalTransitions list of internal transitions
+     * @return list of state chains for internal transitions
+     */
+    private List<StateChain<S, E>> buildInternalStateChains(State<S, E, C> sourceState, E event,
+            List<Transition<S, E, C>> internalTransitions) {
         List<StateChain<S, E>> internalStateChains = new ArrayList<>();
         if (!internalTransitions.isEmpty()) {
+            // For internal transitions, source == target (same state), so we only need the
+            // first one.
+            // All internal transitions on the same event from the same source state have
+            // identical result.
             State<S, E, C> targetState = internalTransitions.get(0).getSource();
             List<State<S, E, C>> targetStateIds = new ArrayList<>();
             targetStateIds.add(targetState);
@@ -92,41 +120,55 @@ public class StateMachineImpl<S, E, C> implements StateMachine<S, E, C> {
         return internalStateChains;
     }
 
-    private List<StateChain<S, E>> buildExternalStateChains(State<S, E, C> sourceState, E event, List<Transition<S, E, C>> externalTransitions) {
+    /**
+     * Build state chains for external transitions using BFS algorithm.
+     * <p>
+     * This method finds all possible state chains from the source state through
+     * external transitions triggered by the given event. It handles:
+     * <ul>
+     * <li>Linear paths: chains that end at a state with no further transitions</li>
+     * <li>Cyclic paths: chains that loop back to a previously visited state</li>
+     * </ul>
+     * <p>
+     * The algorithm uses a queue to explore all paths in breadth-first order,
+     * storing complete paths to track visited states and detect cycles.
+     *
+     * @param sourceState         the source state
+     * @param event               the event that triggers the transitions
+     * @param externalTransitions list of external transitions from the source state
+     * @return list of all possible state chains
+     */
+    private List<StateChain<S, E>> buildExternalStateChains(State<S, E, C> sourceState, E event,
+            List<Transition<S, E, C>> externalTransitions) {
         List<StateChain<S, E>> externalStateChains = new ArrayList<>();
-        Queue<State<S, E, C>> stateQueue = new ArrayDeque<>();
-        // A precursor path to record status
-        Map<State<S, E, C>, List<State<S, E, C>>> pathMap = new HashMap<>();
-        // Initialize the queue and path mapping
+        Queue<List<State<S, E, C>>> pathQueue = new ArrayDeque<>();
         for (Transition<S, E, C> transition : externalTransitions) {
             State<S, E, C> targetState = transition.getTarget();
             List<State<S, E, C>> initialPath = new ArrayList<>();
             initialPath.add(sourceState);
             initialPath.add(targetState);
-            stateQueue.add(targetState);
-            pathMap.put(targetState, initialPath);
+            pathQueue.add(initialPath);
         }
-        while (!stateQueue.isEmpty()) {
-            State<S, E, C> currentState = stateQueue.poll();
-            List<State<S, E, C>> currentPath = pathMap.get(currentState);
-            State state = getState(currentState.getId());
+        while (!pathQueue.isEmpty()) {
+            List<State<S, E, C>> currentPath = pathQueue.poll();
+            State<S, E, C> lastState = currentPath.get(currentPath.size() - 1);
+            State<S, E, C> state = getState(lastState.getId());
             List<Transition<S, E, C>> transitions = state.getEventTransitions(event, TransitionType.EXTERNAL);
             if (transitions.isEmpty()) {
-                externalStateChains.add(new StateChainImpl<>(sourceState, event, currentPath.subList(1, currentPath.size())));
+                externalStateChains
+                        .add(new StateChainImpl<>(sourceState, event, currentPath.subList(1, currentPath.size())));
             }
             for (Transition<S, E, C> transition : transitions) {
                 State<S, E, C> targetState = transition.getTarget();
-                // Avoid loop back paths
-                if (!currentPath.contains(targetState) && !stateQueue.contains(targetState)) {
-                    List<State<S, E, C>> newPath = new ArrayList<>(currentPath);
-                    newPath.add(targetState);
-                    stateQueue.add(targetState);
-                    pathMap.put(targetState, newPath);
-                } else {
-                    // Add the path containing the loop to the result
+                if (currentPath.contains(targetState)) {
                     List<State<S, E, C>> cyclePath = new ArrayList<>(currentPath);
                     cyclePath.add(targetState);
-                    externalStateChains.add(new StateChainImpl<>(sourceState, event, cyclePath.subList(1, cyclePath.size())));
+                    externalStateChains
+                            .add(new StateChainImpl<>(sourceState, event, cyclePath.subList(1, cyclePath.size())));
+                } else {
+                    List<State<S, E, C>> newPath = new ArrayList<>(currentPath);
+                    newPath.add(targetState);
+                    pathQueue.add(newPath);
                 }
             }
         }
@@ -146,12 +188,13 @@ public class StateMachineImpl<S, E, C> implements StateMachine<S, E, C> {
 
         return transition.transit(ctx, false).getId();
     }
+
     @Override
     public List<S> fireParallelEvent(S sourceState, E event, C context) {
         isReady();
         List<Transition<S, E, C>> transitions = routeTransitions(sourceState, event, context);
         List<S> result = new ArrayList<>();
-        if (transitions == null||transitions.isEmpty()) {
+        if (transitions == null || transitions.isEmpty()) {
             Debugger.debug("There is no Transition for " + event);
             failCallback.onFail(sourceState, event, context);
             result.add(sourceState);
@@ -185,7 +228,8 @@ public class StateMachineImpl<S, E, C> implements StateMachine<S, E, C> {
 
         return transit;
     }
-    private List<Transition<S,E,C>> routeTransitions(S sourceStateId, E event, C context) {
+
+    private List<Transition<S, E, C>> routeTransitions(S sourceStateId, E event, C context) {
         State sourceState = getState(sourceStateId);
         List<Transition<S, E, C>> result = new ArrayList<>();
         List<Transition<S, E, C>> transitions = sourceState.getEventTransitions(event);

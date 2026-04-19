@@ -14,7 +14,7 @@ public class SysOutVisitor implements Visitor, StateChainVisitor {
 
     @Override
     public String visitOnEntry(StateMachine<?, ?, ?> stateMachine) {
-        String entry = "-----StateMachine:"+stateMachine.getMachineId()+"-------";
+        String entry = "-----StateMachine:" + stateMachine.getMachineId() + "-------";
         System.out.println(entry);
         return entry;
     }
@@ -29,7 +29,7 @@ public class SysOutVisitor implements Visitor, StateChainVisitor {
     @Override
     public String visitOnEntry(StateChain<?, ?> stateChain) {
         StringBuilder sb = new StringBuilder();
-        String entry = "-----StateChain-Event:+" + stateChain.getEvent() + "------";
+        String entry = "-----StateChain-Event: " + stateChain.getEvent() + "------";
         sb.append(entry).append(LF);
         System.out.println(entry);
         return sb.toString();
@@ -43,7 +43,7 @@ public class SysOutVisitor implements Visitor, StateChainVisitor {
     }
 
     @Override
-    public <S, C, E> String visitOnStateChain(List<State<S, E, C>> chainStateList, E event) {
+    public <S, E, C> String visitOnStateChain(List<State<S, E, C>> chainStateList, E event) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < chainStateList.size() - 1; i++) {
             State<S, E, C> sourceState = chainStateList.get(i);
@@ -59,11 +59,11 @@ public class SysOutVisitor implements Visitor, StateChainVisitor {
     @Override
     public String visitOnEntry(State<?, ?, ?> state) {
         StringBuilder sb = new StringBuilder();
-        String stateStr = "State:"+state.getId();
+        String stateStr = "State:" + state.getId();
         sb.append(stateStr).append(LF);
         System.out.println(stateStr);
-        for(Transition transition: state.getAllTransitions()){
-            String transitionStr = "    Transition:"+transition;
+        for (Transition transition : state.getAllTransitions()) {
+            String transitionStr = "    Transition:" + transition;
             sb.append(transitionStr).append(LF);
             System.out.println(transitionStr);
         }

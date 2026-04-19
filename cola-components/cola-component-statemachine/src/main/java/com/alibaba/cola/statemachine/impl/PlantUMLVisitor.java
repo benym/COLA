@@ -42,7 +42,7 @@ public class PlantUMLVisitor implements Visitor, StateChainVisitor {
     }
 
     @Override
-    public <S, C, E> String visitOnStateChain(List<State<S, E, C>> chainStateList, E event) {
+    public <S, E, C> String visitOnStateChain(List<State<S, E, C>> chainStateList, E event) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < chainStateList.size() - 1; i++) {
             sb.append(chainStateList.get(i).getId())

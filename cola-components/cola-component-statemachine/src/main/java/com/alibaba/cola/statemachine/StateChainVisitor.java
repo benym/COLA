@@ -24,8 +24,8 @@ public interface StateChainVisitor {
 
     /**
      * @param chainStateList the element to be visited.
-     * @param event event
+     * @param event          event
      * @return String
      */
-    <S, C, E> String visitOnStateChain(List<State<S,E,C>> chainStateList, E event);
+    <S, E, C> String visitOnStateChain(List<State<S, E, C>> chainStateList, E event);
 }

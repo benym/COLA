@@ -31,6 +31,7 @@ public interface Transition<S, E, C>{
     void setType(TransitionType type);
 
     TransitionType getType();
+
     /**
      * Gets the target state of this transition.
      *
